@@ -9,7 +9,7 @@ import qualified Data.Binary.Get                as G
 import           GHC.Int
 import           HeaderParser
 
-ip :: [Char]
+ip :: String
 ip = "224.0.0.251"
 
 port :: PortNumber
