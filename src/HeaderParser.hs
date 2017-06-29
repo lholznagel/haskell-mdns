@@ -28,10 +28,10 @@ data Question = Question
 data Resource = Resource
   {
     resourceName     :: ByteString
-  , resourceType     :: Word16
-  --, resourceClass    :: Word16
-  --, resourceTTL      :: Int32
-  --, resourceRDLenght :: Int16
+  , resourceType     :: Word8
+  , resourceClass    :: Word8
+  , resourceTTL      :: Int16
+  , resourceRDLenght :: Int16
   --, resourceRData    :: ByteString
   } deriving (Show)
 
@@ -86,6 +86,8 @@ parseQuestion = do
   lenghtType <- fromIntegral <$> G.getWord8
   qtype <- G.getByteString lenghtType
 
+  -- TODO Unicast Response
+  -- https://en.wikipedia.org/wiki/Multicast_DNS#Queries
   lengthClass <- fromIntegral <$> G.getWord8
   qclass <- G.getByteString lengthClass
   pure $ Question qname qtype qclass
@@ -94,11 +96,14 @@ parseResource :: G.Get Resource
 parseResource = do
   lenghtName <- fromIntegral <$> G.getWord8
   rName <- G.getByteString lenghtName
-  rType <- G.getWord16be
-  --rClass <- G.getWord16be
-  --rTTL <- G.getInt32be
-  --rRDLength <- G.getInt16be
+  rType <- G.getWord8
+
+  -- TODO Cache-Flush
+  -- https://en.wikipedia.org/wiki/Multicast_DNS#Resource_Records
+  rClass <- G.getWord8
+  rTTL <- G.getInt16be
+  rRDLength <- G.getInt16be
 
   --lengthData <- fromIntegral <$> G.getWord8
   --rRData <- G.getByteString lengthData
-  pure $ Resource rName rType
+  pure $ Resource rName rType rClass rTTL rRDLength
