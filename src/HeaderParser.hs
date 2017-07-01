@@ -1,8 +1,9 @@
 module HeaderParser ( parseHeader ) where
 
-import qualified Data.Binary.Get           as G
+import qualified Data.Binary.Get           as SG
 import qualified Data.Binary.Strict.BitGet as BG
 
+import           Control.Monad
 import           Data.ByteString
 import           Data.Int
 import           Data.Word
@@ -28,11 +29,11 @@ data Question = Question
 data Resource = Resource
   {
     resourceName     :: ByteString
-  , resourceType     :: Word8
-  , resourceClass    :: Word8
-  , resourceTTL      :: Int16
-  , resourceRDLenght :: Int16
-  --, resourceRData    :: ByteString
+  , resourceType     :: ByteString
+  , resourceClass    :: ByteString
+  , resourceTTL      :: Int32
+  , resourceRDLength :: Int16
+  , resourceRData    :: ByteString
   } deriving (Show)
 
 data Header = Header
@@ -43,20 +44,20 @@ data Header = Header
   , anCount  :: !Int16
   , nsCount  :: !Int16
   , arCount  :: !Int16
-  , question :: !Question
-  , resource :: !Resource
+  , question :: ![Question]
+  , resource :: ![Resource]
   } deriving (Show)
 
-parseHeader :: G.Get Header
+parseHeader :: SG.Get Header
 parseHeader = do
-  id <- G.getWord16be
-  flags <- G.getByteString 2
-  qdCount <- G.getInt16be
-  anCount <- G.getInt16be
-  nsCount <- G.getInt16be
-  arCount <- G.getInt16be
-  questions <- parseQuestion
-  resources <- parseResource
+  id <- SG.getWord16be
+  flags <- SG.getByteString 2
+  qdCount <- SG.getInt16be
+  anCount <- SG.getInt16be
+  nsCount <- SG.getInt16be
+  arCount <- SG.getInt16be
+  questions <- getQuestion (fromIntegral (qdCount :: Int16) :: Int)
+  resources <- getResourceRecords (fromIntegral (anCount :: Int16) :: Int)
 
   let flag = BG.runBitGet flags parseFlag
 
@@ -72,38 +73,49 @@ parseFlag = do
   rd <- BG.getBit
   ra <- BG.getBit
 
-  -- field z is for future use, so we need to skip it
+  -- field z is for future use, so we skip it
   _ <- BG.getAsWord8 3
   rcode <- BG.getAsWord8 4
 
   pure $ Flag qr opcode aa tc rd ra rcode
 
-parseQuestion :: G.Get Question
-parseQuestion = do
-  lenghtName <- fromIntegral <$> G.getWord8
-  qname <- G.getByteString lenghtName
+getQuestion :: Int -> SG.Get [Question]
+getQuestion count = replicateM count parseQuestion
 
-  lenghtType <- fromIntegral <$> G.getWord8
-  qtype <- G.getByteString lenghtType
+parseQuestion :: SG.Get Question
+parseQuestion = do
+  lenghtName <- fromIntegral <$> SG.getWord8
+  qname <- SG.getByteString lenghtName
+
+  lenghtType <- fromIntegral <$> SG.getWord8
+  qtype <- SG.getByteString lenghtType
 
   -- TODO Unicast Response
   -- https://en.wikipedia.org/wiki/Multicast_DNS#Queries
-  lengthClass <- fromIntegral <$> G.getWord8
-  qclass <- G.getByteString lengthClass
+  lengthClass <- fromIntegral <$> SG.getWord8
+  qclass <- SG.getByteString lengthClass
   pure $ Question qname qtype qclass
 
-parseResource :: G.Get Resource
+getResourceRecords :: Int -> SG.Get [Resource]
+getResourceRecords count = replicateM count parseResource
+
+parseResource :: SG.Get Resource
 parseResource = do
-  lenghtName <- fromIntegral <$> G.getWord8
-  rName <- G.getByteString lenghtName
-  rType <- G.getWord8
+  lenghtName <- fromIntegral <$> SG.getWord8
+  rName <- SG.getByteString lenghtName
+
+  lenghtType <- fromIntegral <$> SG.getWord8
+  rType <- SG.getByteString lenghtType
 
   -- TODO Cache-Flush
   -- https://en.wikipedia.org/wiki/Multicast_DNS#Resource_Records
-  rClass <- G.getWord8
-  rTTL <- G.getInt16be
-  rRDLength <- G.getInt16be
+  lenghtType <- fromIntegral <$> SG.getWord8
+  rClass <- SG.getByteString lenghtType
 
-  --lengthData <- fromIntegral <$> G.getWord8
-  --rRData <- G.getByteString lengthData
-  pure $ Resource rName rType rClass rTTL rRDLength
+  rTTL <- SG.getInt32be
+  rRDLength <- SG.getInt16be
+
+  lengthData <- fromIntegral <$> SG.getWord8
+  rRData <- SG.getByteString lengthData
+
+  pure $ Resource rName rType rClass rTTL rRDLength rRData

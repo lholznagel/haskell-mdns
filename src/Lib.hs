@@ -25,4 +25,6 @@ response = do
   print msg
   let header = G.runGet parseHeader msg
   print header
+  print ""
+  print ""
   response
