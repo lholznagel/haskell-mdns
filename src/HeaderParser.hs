@@ -65,19 +65,14 @@ parseHeader = do
 
 -- TODO remove BitGet and make it a normal Get
 parseFlag :: BG.BitGet Flag
-parseFlag = do
-  qr <- BG.getBit
-  opcode <- BG.getAsWord8 4
-  aa <- BG.getBit
-  tc <- BG.getBit
-  rd <- BG.getBit
-  ra <- BG.getBit
-
-  -- field z is for future use, so we skip it
-  _ <- BG.getAsWord8 3
-  rcode <- BG.getAsWord8 4
-
-  pure $ Flag qr opcode aa tc rd ra rcode
+parseFlag = Flag
+  <$> BG.getBit
+  <*> BG.getAsWord8 4
+  <*> BG.getBit
+  <*> BG.getBit
+  <*> BG.getBit
+  <*> BG.getBit
+  <*> (BG.getAsWord8 3 >> BG.getAsWord8 4) -- field z is for future use, so we skip it
 
 getQuestion :: Int -> SG.Get [Question]
 getQuestion count = replicateM count parseQuestion
