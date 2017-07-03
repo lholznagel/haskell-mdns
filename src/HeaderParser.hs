@@ -1,4 +1,4 @@
-module HeaderParser ( parseHeader ) where
+module HeaderParser where
 
 import qualified Data.Binary.Get           as SG
 import qualified Data.Binary.Strict.BitGet as BG
@@ -38,7 +38,7 @@ data Resource = Resource
 
 data Header = Header
   {
-    id       :: !Word16
+    headerId :: !Word16
   , flag     :: !(Either String Flag)
   , qdCount  :: !Int16
   , anCount  :: !Int16
@@ -50,18 +50,18 @@ data Header = Header
 
 parseHeader :: SG.Get Header
 parseHeader = do
-  id <- SG.getWord16be
-  flags <- SG.getByteString 2
-  qdCount <- SG.getInt16be
-  anCount <- SG.getInt16be
-  nsCount <- SG.getInt16be
-  arCount <- SG.getInt16be
-  questions <- getQuestion (fromIntegral (qdCount :: Int16) :: Int)
-  resources <- getResourceRecords (fromIntegral (anCount :: Int16) :: Int)
+  headerId' <- SG.getWord16be
+  flags' <- SG.getByteString 2
+  qdCount' <- SG.getInt16be
+  anCount' <- SG.getInt16be
+  nsCount' <- SG.getInt16be
+  arCount' <- SG.getInt16be
+  questions <- getQuestion (fromIntegral (qdCount' :: Int16) :: Int)
+  resources <- getResourceRecords (fromIntegral (anCount' :: Int16) :: Int)
 
-  let flag = BG.runBitGet flags parseFlag
+  let flag' = BG.runBitGet flags' parseFlag
 
-  pure $ Header id flag qdCount anCount nsCount arCount questions resources
+  pure $ Header headerId' flag' qdCount' anCount' nsCount' arCount' questions resources
 
 -- TODO remove BitGet and make it a normal Get
 parseFlag :: BG.BitGet Flag
@@ -75,7 +75,7 @@ parseFlag = Flag
   <*> (BG.getAsWord8 3 >> BG.getAsWord8 4) -- field z is for future use, so we skip it
 
 getQuestion :: Int -> SG.Get [Question]
-getQuestion count = replicateM count parseQuestion
+getQuestion count' = replicateM count' parseQuestion
 
 parseQuestion :: SG.Get Question
 parseQuestion = do
@@ -92,7 +92,7 @@ parseQuestion = do
   pure $ Question qname qtype qclass
 
 getResourceRecords :: Int -> SG.Get [Resource]
-getResourceRecords count = replicateM count parseResource
+getResourceRecords count' = replicateM count' parseResource
 
 parseResource :: SG.Get Resource
 parseResource = do
@@ -104,8 +104,8 @@ parseResource = do
 
   -- TODO Cache-Flush
   -- https://en.wikipedia.org/wiki/Multicast_DNS#Resource_Records
-  lenghtType <- fromIntegral <$> SG.getWord8
-  rClass <- SG.getByteString lenghtType
+  lenghtClass <- fromIntegral <$> SG.getWord8
+  rClass <- SG.getByteString lenghtClass
 
   rTTL <- SG.getInt32be
   rRDLength <- SG.getInt16be
