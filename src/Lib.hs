@@ -7,7 +7,7 @@ import           Network.Socket.ByteString.Lazy
 
 import qualified Data.Binary.Get                as G
 import           GHC.Int
-import           HeaderParser
+import           Network.MDNS.Decoder
 
 ip :: String
 ip = "224.0.0.251"
@@ -25,6 +25,5 @@ response = do
   print msg
   let header = G.runGet parseHeader msg
   print header
-  print ""
-  print ""
+  print "----------------"
   response
