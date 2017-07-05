@@ -1,30 +1,31 @@
 name:                mdns
 version:             0.1.0.0
 -- synopsis:
--- description:
+description:         Haskell mDNS parser
 homepage:            https://github.com/lholznagel/haskell-mdns#readme
-license:             BSD3
+license:             MIT
 license-file:        LICENSE
-author:              lholznagel
-maintainer:          info.lholznagel@outlook.com
+author:              Lars Holznagel
+maintainer:          lholznagel@outlook.com
 copyright:           2017 lholznagel
-category:            Web
+category:            Network
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
-  hs-source-dirs:      src
+  ghc-options:         -Wall
   exposed-modules:     Lib
-                     , HeaderParser
+                     , Network.MDNS.Decoder
+  other-modules:       Network.MDNS.Internal
   build-depends:       base >= 4.7 && < 5
                      , network
                      , network-multicast
                      , binary
                      , binary-strict
                      , bytestring
+  hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options:         -Wall
 
 executable mdns-exe
   hs-source-dirs:      app
