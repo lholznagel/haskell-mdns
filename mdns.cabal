@@ -17,13 +17,19 @@ library
   ghc-options:         -Wall
   exposed-modules:     Lib
                      , Network.MDNS.Decoder
-  other-modules:       Network.MDNS.Internal
+                     , Network.MDNS.Internal
+                     , Network.MDNS.Types
+  other-modules:       Network.MDNS.StateBinary
   build-depends:       base >= 4.7 && < 5
-                     , network
-                     , network-multicast
+                     , attoparsec
                      , binary
                      , binary-strict
                      , bytestring
+                     , conduit-extra
+                     , containers
+                     , mtl
+                     , network
+                     , network-multicast
   hs-source-dirs:      src
   default-language:    Haskell2010
 

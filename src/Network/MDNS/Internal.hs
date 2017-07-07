@@ -4,6 +4,34 @@ import           Data.ByteString
 import           Data.Int
 import           Data.Word
 
+-- | Type for a domain
+type Domain = ByteString
+
+-- | Types for resource records.
+data TYPE = A
+          | AAAA
+          | NS
+          | TXT
+          | MX
+          | CNAME
+          | SOA
+          | PTR
+          | SRV
+          | DNAME
+          | OPT
+          | DS
+          | RRSIG
+          | NSEC
+          | DNSKEY
+          | NSEC3
+          | NSEC3PARAM
+          | TLSA
+          | CDS
+          | CDNSKEY
+          | CSYNC
+          | UNKNOWN Word16
+          deriving (Eq, Show, Read)
+
 data Flag = Flag
   {
     qr     :: !Bool
@@ -13,14 +41,14 @@ data Flag = Flag
   , rd     :: !Bool
   , ra     :: !Bool
   , rcode  :: !Word8
-  } deriving (Show)
+  } deriving (Eq, Show, Read)
 
 data Question = Question
   {
     questionName  :: ByteString
   , questionType  :: ByteString
   , questionClass :: ByteString
-  } deriving (Show)
+  } deriving (Eq, Show, Read)
 
 data Resource = Resource
   {
@@ -30,7 +58,7 @@ data Resource = Resource
   , resourceTTL      :: Int32
   , resourceRDLength :: Int16
   , resourceRData    :: ByteString
-  } deriving (Show)
+  } deriving (Eq, Show, Read)
 
 data Header = Header
   {
@@ -42,4 +70,4 @@ data Header = Header
   , arCount  :: !Int16
   , question :: ![Question]
   , resource :: ![Resource]
-  } deriving (Show)
+  } deriving (Eq, Show, Read)

@@ -1,11 +1,20 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Network.MDNS.Decoder where
 
 import qualified Data.Binary.Get           as SG
 import qualified Data.Binary.Strict.BitGet as BG
+import qualified Data.ByteString.Char8     as BS
 
 import           Control.Monad
+import           Data.Bits                 (testBit, (.&.))
 import           Data.Int
 import           Network.MDNS.Internal
+import           Network.MDNS.StateBinary
+
+data ResourceRecord = ResourceRecord {
+  domain :: Domain
+}
 
 parseHeader :: SG.Get Header
 parseHeader = do
@@ -50,9 +59,6 @@ parseQuestion = do
   qclass <- SG.getByteString lengthClass
   pure $ Question qname qtype qclass
 
-getResourceRecords :: Int -> SG.Get [Resource]
-getResourceRecords count' = replicateM count' parseResource
-
 parseResource :: SG.Get Resource
 parseResource = do
   lenghtName <- fromIntegral <$> SG.getWord8
@@ -73,3 +79,51 @@ parseResource = do
   rRData <- SG.getByteString lengthData
 
   pure $ Resource rName rType rClass rTTL rRDLength rRData
+
+getResourceRecords :: Int -> SG.Get [Resource]
+getResourceRecords count' = replicateM count' parseResource
+
+-------- NEW STUFF --------
+getResourceRecord :: SGet ResourceRecord
+getResourceRecord = do
+  domain' <- getDomain
+  typ' <- getTYPE
+  pure $ ResourceRecord domain'
+
+getTYPE :: SGet TYPE
+getTYPE = intToType <$> get16
+
+getDomain :: SGet Domain
+getDomain = do
+  position' <- getPosition
+  c <- getInt8
+  let n = getValue c
+
+  -- syntax hack to avoid using MultiWayIf
+  case () of
+    _ | c == 0 -> return "."
+    _ | isPointer c -> do
+      d <- getInt8
+      let offset = n * 256 + d
+      mo <- pop offset
+      case mo of
+        Nothing -> fail $ "getDomain: " ++ show offset
+        -- A pointer may refer to another pointer.
+        -- So, register the position for the domain
+        Just o  -> push position' o >> return o
+    -- As for now extended labels have no use
+    -- This may change in the future
+    _ | isExtLabel c -> return ""
+    _ -> do
+      hs <- getNByteString n
+      ds <- getDomain
+      let domain' =
+                  case ds of
+                    "." -> hs `BS.append` "."
+                    _   -> hs `BS.append` "." `BS.append` ds
+      push position' domain'
+      return domain'
+  where
+    getValue c = c .&. 0x3f
+    isPointer c = testBit c 7 && testBit c 6
+    isExtLabel c = not (testBit c 7) && testBit c 6
